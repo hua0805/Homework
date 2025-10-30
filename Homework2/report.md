@@ -1,70 +1,246 @@
 # 41343141
 
 作業二
-第一題
+
 ## 解題說明
 
-本題要求設計一個多項式類別的類別介面與基本運算功能。
+實作整個Polynomial類別(ADT)
 
 ### 解題策略
 
-1.定義 Term 儲存係數與指數，Polynomial 用動態陣列管理多項式項目。
-2.以 operator+、operator* 完成多項式加法與乘法，用 Eval() 計算多項式值。
+1.建構子
+  Add( )
+  Mult( )
+  Eval( )
+
+2.管理Term陣列( termArray / capacity / terms )
 
 ## 程式實作
 
+以下為主要程式碼: 
+
+(瘋狂程設)
+
 ```cpp
 
+class Term {
+	friend Polynomial;
+	friend ostream& operator<<(ostream &output, const Polynomial &Poly);
+private:
+	int exp;
+	float coef;
+};
+
+class Polynomial {
+private:
+	Term* termArray;
+	int capacity;
+	int terms;
+public:
+	Polynomial() :capacity(2), terms(0) {
+		termArray = new Term[capacity];
+	}
+	~Polynomial() { delete[] termArray; }
+	Polynomial Add(Polynomial b);
+	Polynomial Mult(Polynomial b);
+	float Eval(float x);
+	void newTerm(const float newcoef, const int newexp);
+
+```
+(Visual Studio)
+
+```cpp
+class Term {
+    friend class Polynomial;
+private:
+    int exp;
+    float coef;
+};
+
+class Polynomial {
+private:
+    Term* termArray;
+    int capacity;
+    int terms;
+
+public:
+    Polynomial();
+    ~Polynomial();
+    Polynomial Add(Polynomial b);
+    Polynomial Mult(Polynomial b);
+    float Eval(float x);
+    void newTerm(const float newcoef, const int newexp);
+};
 
 ```
 
 ## 效能分析
 
-1. 時間複雜度：程式的時間複雜度為 Eval:O(t) Add:O(n+m) Mult:O((nm)^2)。
-2.空間複雜度：空間複雜度為 Eval:O(1) Add:O(n+m) Mult:O((nm))。
+| 函式       | 時間複雜度    | 空間複雜度         |
+| -------- | -------- | ------------- |
+| `Add()`  | O(m + n) | O(m + n)      |
+| `Mult()` | O(m × n) | O(m + n)（或更多） |
+| `Eval()` | O(m)     | O(1)          |
+
 
 ## 測試與驗證
 
 ### 測試案例
 
-<img width="392" height="156" alt="image" src="https://github.com/user-attachments/assets/a444156d-fe6d-4ae9-b4b7-18cc2f015b3b" />
-
-<img width="595" height="156" alt="image" src="https://github.com/user-attachments/assets/c40ff859-b5e0-459e-9803-2ebb83c43db9" />
-
-<img width="432" height="152" alt="image" src="https://github.com/user-attachments/assets/d5562730-7d0b-4ba9-88d1-d3571196fa34" />
+| 第一項 | 第二項 | 輸出結果 |
+| - | - | --------- |
+| 3 5 2 3 1 7 0 | 2 3 2 -5 0 | 8X^ + 3X^1 + 2X^0 |
+| 3 3 4 2 2 -5 0 | 3 -1 3 4 1 -1 0 | 3X^4 + -1X^3 + 2X^2 + 4X^1 + -6X^0 |
+| 2 4 3 2 1 | 2 3 3 5 0 | 7X^3 + 2X^1 + 5X^0 |
 
 ### 編譯與執行指令
 
-```shell
-$ g++ -std=c++17 -O2 -Wall Homework2.cpp -o hw2.exe
-$ .\hw2.exe=
+```bash
+# 編譯
+g++ Source.cpp -o polynomial.exe
+
+# 執行
+Polynomial.exe
 ```
 
 ### 結論
 
-1.程式能正確計算當exp跟coef個別是多少時的答案。
-2.在exp是0或負數的情況下，程式是否正確，符合設計預期。
+1.使用Visual Studio編譯測試會導致多個 Polynomial 共用同一塊記憶體。
+
+2.因此使用Visual Studio更改一些程式在輸入大項數（>10）時能自動擴充記憶體，未發生崩潰。
+
+3.輸入與輸出格式清晰，執行穩定，無記憶體錯誤。
+
 ## 申論及開發報告
 
-### 選擇friend的原因
-在本程式中，使用friend來寫這串code的主要原因如下：
+| 功能                      | 瘋狂程設                             | Visual Studio                                    | 差異說明                               |
+| ----------------------- | ------------------------------ | ------------------------------------------- | ---------------------------------- |
+| **拷貝建構子**               | ❌ 無                            | ✅ 加入                                        | 保證複製時新建一份 termArray，不共用同一記憶體       |
+| **指派運算子 =**             | ❌ 無                            | ✅ 加入                                        | 避免 result = polyA.Add(polyB) 時重複刪除 |
+| **newTerm 擴充機制**        | ❌ 沒有 `reserve()`               | ✅ 新增自動擴充                                    | 防止 termArray 滿時寫出界導致 crash         |
+| **Add 函式宣告**            | `Polynomial Add(Polynomial b)` | `Polynomial Add(const Polynomial& b) const` | 改成以常量參考傳入，避免多餘複製                   |
+| **解構子安全性**              | 可能重複 delete                    | 不會                                        | 因為每個物件都有獨立的記憶體                     |
+| **Move semantics (可選)** | ❌ 無                            | ✅ 可加（非必須）                                   | 提升效能，減少不必要複製                       |
 
-1.允許內部直接訪問私有資料 在 Polynomial 的成員函式裡（例如 Eval()、normalize()）可以直接寫：
-s += termArray[i].coef * pow(x, termArray[i].exp); 這是可行的，因為 Term 對 Polynomial 是 friend;沒有這行 friend 的話則會出現error。
+-------------------------------------------
 
-2.好處
-Polynomial 是唯一能操作 Term 內部的類別。 外部（例如 main()）不能直接動 coef 或 exp，防止亂改資料。
+作業二
 
-3.沒有使用friend的情況
-因Term的私有資料無法被Polynomial使用，所以coef和exp會是pritave。 程式碼會變得更長一串、更消耗效能、記憶體之類的。 因為少了friend就代表不能直接存取，需要跑好幾個流程才可以存取。 所以程式執行的時間一旦長起來，消耗的東西就會增長。
+## 解題說明
 
-   ```
-### 心得
-在上學期就有學習過C++中的*friend*，但在課堂實際使用卻很少，這次的功課難得出現可以使用*friend*的程式，因為這次的程式碼很長一串，我當時就在講要怎麼把效能提升上去，不要吃這麼多記憶體，突然就想到了之前學過的*friend*而且剛好，這段程式碼又很常去抓函式裡面的數值或變數。
-這次使用*friend*讓我對這個程式有更深入的理解，像是*friend*常使用的方式: *friend class X*
- *friend 函式宣告*，而且我覺得*friend*這個程式很有趣，跟他的名字一樣，是朋友，朋友之間可以互相存取，但朋友的朋友不能存取，很像是雙方的小祕密一樣。
- 這次使用*friend*讓我知道他的優缺點，優點是可以緊密合作、保持封裝、參數不容易被修改、被保護得很好。缺點是當濫用了*friend*會讓類別之間相似度過高，很容易改了一邊參數另外一邊也一起更動了，可維護性和測試性會下降，因為太多朋友了會導致邊界模糊。
-    PowerSetRecursive(S, index + 1, subset);
-    subset.pop_back();
-   }
-   ```
+編寫 C++ 函數用於計算多項式的加法。
+
+### 解題策略
+
+在第一題的 Polynomial 類別基礎上，
+去完成兩個功能：
+
+	輸入多項式運算子	operator>>
+	輸出多項式運算子	operator<<
+
+再利用程式碼做出加法運算。
+	
+## 程式實作
+
+以下為主要程式碼：
+
+```cpp
+
+istream& operator>>(istream& is, Polynomial& poly) {
+//輸入運算子多載
+	float coef;
+	int exp, n;
+	is >> n;
+	while (n--) {
+		is >> coef >> exp;
+		poly.newTerm(coef, exp);
+	}
+	return is;
+}
+
+
+ostream& operator<<(ostream& out, const Polynomial& p) {
+//輸出運算子多載
+    if (p.terms == 0) {
+        out << "0";
+        return out;
+    }
+    for (int i = 0; i < p.terms; ++i) {
+        if (i > 0) out << " + ";
+        out << p.termArray[i].coef << "X^" << p.termArray[i].exp;
+    }
+    return out;
+}
+
+```
+
+## 效能分析
+
+| 函式名稱         | 時間複雜度 | 空間複雜度 |
+| ------------ | ----- | ----- |
+| `operator>>` | O(n)  | O(n)  |
+| `operator<<` | O(n)  | O(1)  |
+
+整體C++函式運作
+
+| **時間複雜度** | **O(m + n)** |
+
+| **空間複雜度** | **O(m + n)** |
+
+
+## 測試與驗證
+
+### 測試案例
+
+| 第一項 | 第二項 | 輸出結果 |
+| - | - | --------- |
+| 3 5 2 3 1 7 0 | 2 3 2 -5 0 | 8X^ + 3X^1 + 2X^0 |
+| 3 3 4 2 2 -5 0 | 3 -1 3 4 1 -1 0 | 3X^4 + -1X^3 + 2X^2 + 4X^1 + -6X^0 |
+| 2 4 3 2 1 | 2 3 3 5 0 | 7X^3 + 2X^1 + 5X^0 |
+
+### 編譯與執行指令
+
+```bash
+# 編譯
+g++ Source.cpp -o polynomial.exe
+
+# 執行
+Polynomial.exe
+```
+
+### 結論
+
+1.使用者可輸入任意項數的多項式，每項的係數與指數皆能正確讀取並儲存。
+
+2.輸出結果格式化清晰，能依序列印各項之係數與指數。
+
+3.對於空多項式（項數為 0）的情況，能正確顯示為 0。
+
+4.程式執行穩定，無記憶體錯誤或越界情形。
+
+## 申論及開發報告
+
+本題要求設計一個程式，能輸入兩個多項式(不限項數)做加法運算。
+
+### 1. **類別宣告**  
+
+為了讓運算子能夠直接存取類別內的私有成員 (termArray, terms)，
+operator>> 與 operator<< 必須宣告為 friend function。
+
+### 2. **輸入及輸出**  
+
+透過 operator>> 讀入多項式的項數，並依序輸入每一項的係數與指數。
+
+使用先前設計的 newTerm() 函式將資料新增至 termArray 動態陣列中。
+
+透過 operator<< 將多項式以可讀性高的格式輸出。
+
+### 3. **指數排序+合併策略**
+
+依序比較兩多項式當前項的指數。
+
+若指數相同 → 係數相加，結果插入新多項式。
+
+若指數不同 → 將指數較大的項直接加入新多項式。
+
+當其中一個多項式處理完後，將另一個剩餘的項全部加入結果。
